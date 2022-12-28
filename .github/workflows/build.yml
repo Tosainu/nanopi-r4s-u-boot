@@ -1,0 +1,30 @@
+name: build
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3.2.0
+        with:
+          persist-credentials: false
+      - uses: docker/login-action@v2.1.0
+        id: login
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Earthly
+        uses: ./.github/actions/install-earthly
+      - run: earthly --ci +prep
+        env:
+          EARTHLY_PUSH: ${{ github.ref == 'refs/heads/main' }}
+          FORCE_COLOR: true
+      - run: earthly --artifact --ci +u-boot/u-boot-rockchip.bin /tmp/build/
+        env:
+          FORCE_COLOR: true
+      - uses: actions/upload-artifact@v3.1.0
+        with:
+          name: build
+          path: /tmp/build

@@ -1,0 +1,16 @@
+name: Install Earthly
+description: Install Earthly v0.6.30 (earthly-linux-amd64) to ~/.local/bin/earthly
+inputs: {}
+runs:
+  using: composite
+  steps:
+    - run: |
+        cd "$(mktemp -d)"
+        curl -LO https://github.com/earthly/earthly/releases/download/v0.6.30/earthly-linux-amd64
+        echo '5263b6a73700710e4c53b908f6c66fad9258d167a94110667e7cf4e036decb1b26c89743b0424a3028abcf1b1a52e05b1489ace48a9c6415a062651e3473c424  earthly-linux-amd64' | sha512sum -c
+        mkdir -p ~/.local/bin
+        mv earthly-linux-amd64 ~/.local/bin/earthly
+        chmod +x ~/.local/bin/earthly
+        EARTHLY_DISABLE_ANALYTICS=true earthly config global '{disable_analytics: true, disable_log_sharing: true}'
+        earthly --version
+      shell: bash
