@@ -1,12 +1,12 @@
-VERSION 0.6
+VERSION 0.7
 
 prep:
-    FROM ubuntu:jammy@sha256:27cb6e6ccef575a4698b66f5de06c7ecd61589132d5a91d098f7f3f9285415a9
+    FROM ubuntu:jammy@sha256:9a0bdde4188b896a372804be2384015e90e3f84906b750c1a53539b585fbbe7f
     RUN \
         apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             bc bison ca-certificates coreutils curl flex gcc gzip libc6-dev libssl-dev make \
-            python3-dev python3-setuptools swig tar xz-utils && \
+            python3-dev python3-pyelftools python3-setuptools swig tar xz-utils && \
         rm -rf /var/lib/apt/lists/*
     ARG TOOLCHAIN_HOST=x86_64
     ARG TOOLCHAIN_VERSION=12.2.rel1
@@ -33,8 +33,8 @@ prep:
 tf-a:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/ARM-software/arm-trusted-firmware/archive/f4d8ed50d27687d437e6885d2b6445a720ae9f69.tar.gz -o /tmp/archive.tar.gz && \
-        echo 'c5b50c8cea4c58f590b64db47f035d9e70712dfad571f51a38592a63604730bf  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/ARM-software/arm-trusted-firmware/archive/ba12668a65f9b10bc18f3b49a71999ed5d32714a.tar.gz -o /tmp/archive.tar.gz && \
+        echo '061b4cebdb77308d2b7c71a686c3c4fcbbfa533284ac275c9499544b6998d97a  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
     RUN sed -i 's!^\(#define\s\+RK3399_BAUDRATE\b\).\+$!\1 1500000!' plat/rockchip/rk3399/rk3399_def.h
     RUN sed -i 's!\s\(-Wl,\)\?--fatal-warnings\b!!g' Makefile
@@ -44,10 +44,11 @@ tf-a:
 u-boot:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/adcee0791f3318ead9b22879e2ce9409f400dcab.tar.gz -o /tmp/archive.tar.gz && \
-        echo '626e75bbed0a1e346f4726bb8918fc5d4ee2cac2bfa760c8cd3a85f0b912a2eb  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/8c39999acb726ef083d3d5de12f20318ee0e5070.tar.gz -o /tmp/archive.tar.gz && \
+        echo '75993c4116b89576e8b03e89633b4b555c3348d5aa6b8ff9b623bab555affe5c  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
     COPY +tf-a/bl31.elf .
-    RUN make CROSS_COMPILE=/opt/arm/aarch64-none-elf/bin/aarch64-none-elf- nanopi-r4s-rk3399_defconfig && \
-        BL31=bl31.elf PATH="${PWD}/scripts/dtc:${PATH}" make CROSS_COMPILE=/opt/arm/aarch64-none-elf/bin/aarch64-none-elf- -j$(nproc)
+    COPY nanopi-r4s-rk3399_bootstd_defconfig configs/
+    RUN make CROSS_COMPILE=/opt/arm/aarch64-none-elf/bin/aarch64-none-elf- nanopi-r4s-rk3399_bootstd_defconfig && \
+        PATH="${PWD}/scripts/dtc:${PATH}" make BINMAN_DEBUG=1 BINMAN_VERBOSE=6 BL31=bl31.elf CROSS_COMPILE=/opt/arm/aarch64-none-elf/bin/aarch64-none-elf- -j$(nproc)
     SAVE ARTIFACT u-boot-rockchip.bin /
