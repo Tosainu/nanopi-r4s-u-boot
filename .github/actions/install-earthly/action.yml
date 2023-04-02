@@ -1,13 +1,13 @@
 name: Install Earthly
-description: Install Earthly v0.7.0 (earthly-linux-amd64) to ~/.local/bin/earthly
+description: Install Earthly v0.7.2 (earthly-linux-amd64) to ~/.local/bin/earthly
 inputs: {}
 runs:
   using: composite
   steps:
     - run: |
         cd "$(mktemp -d)"
-        curl -LO https://github.com/earthly/earthly/releases/download/v0.7.0/earthly-linux-amd64
-        echo '8c91a3f3110c091a75e572d058d21abbf365ef2587e78d9d821ada1a3531641c3f6dde9cc9370625475c0e3f159e39c42e9651b0a5504011ea01e061aef2e5db  earthly-linux-amd64' | sha512sum -c
+        curl -LO https://github.com/earthly/earthly/releases/download/v0.7.2/earthly-linux-amd64
+        echo 'e0b3e9faf44d5d04b80887c740552f9689da5cca6a2443ae6108873cea494c928e4eee6ee107102306d0b6d7f6ec2adbd96059d6b78e11b5b408c315b522e7cf  earthly-linux-amd64' | sha512sum -c
         mkdir -p ~/.local/bin
         mv earthly-linux-amd64 ~/.local/bin/earthly
         chmod +x ~/.local/bin/earthly
