@@ -1,7 +1,7 @@
 VERSION 0.7
 
 prep:
-    FROM ubuntu:kinetic@sha256:a82eebb42083a134e009a6b81a7e5d2eecc37112fa8ae40642bd3c5153b7e4f0
+    FROM ubuntu:kinetic@sha256:a9a425d086dbb34c1b5b99765596e2a3cc79b33826866c51cd4508d8eb327d2b
     RUN apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             bc bison ca-certificates coreutils curl flex gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
@@ -13,8 +13,8 @@ prep:
 tf-a:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/ARM-software/arm-trusted-firmware/archive/18459571328c6b09954f4278a86aefc20348f42b.tar.gz -o /tmp/archive.tar.gz && \
-        echo '27129603e17c9a122668b519165410a7c7fbed435898710093e0e9279283bfa3  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/ARM-software/arm-trusted-firmware/archive/d5f19c49baa7f420daf3afa2b79cc977ce2e9c74.tar.gz -o /tmp/archive.tar.gz && \
+        echo 'c33e0b0828baa4e09abe25835a976dc1866f685408c1271ee3222d5e8cbb2e78  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
     RUN sed -i 's!^\(#define\s\+RK3399_BAUDRATE\b\).\+$!\1 1500000!' plat/rockchip/rk3399/rk3399_def.h
     RUN make CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=arm-linux-gnueabi- PLAT=rk3399 DEBUG=0 bl31 -j$(nproc)
@@ -23,11 +23,11 @@ tf-a:
 u-boot:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/6c617e082d181cff0c8d5b2ab8d00f5017cc13e1.tar.gz -o /tmp/archive.tar.gz && \
-        echo '776abf4dcdd44f9e94f35c8ab4419069e491e6cfb3735756e3b41557460e129c  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/50f64026f7a4c2d0a101c93916e01782e4fbbe7f.tar.gz -o /tmp/archive.tar.gz && \
+        echo 'e9ac993f9085b423a5b74bdb92446281ee50a44a9d01e39cbabd16281f700411  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
     COPY +tf-a/bl31.elf .
-    COPY nanopi-r4s-rk3399_bootstd_defconfig configs/
-    RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_bootstd_defconfig && \
+    COPY nanopi-r4s-rk3399_my_defconfig configs/
+    RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_my_defconfig && \
         PATH="${PWD}/scripts/dtc:${PATH}" make BINMAN_DEBUG=1 BINMAN_VERBOSE=6 BL31=bl31.elf CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
     SAVE ARTIFACT u-boot-rockchip.bin /
