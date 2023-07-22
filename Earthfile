@@ -1,7 +1,7 @@
 VERSION 0.7
 
 prep:
-    FROM ubuntu:kinetic@sha256:1fa7586c0f10cc7ce7ca379ae48bf06776325b9f8e97963ce40803a8bcc07dca
+    FROM ubuntu:kinetic@sha256:e322f4808315c387868a9135beeb11435b5b83130a8599fd7d0014452c34f489
     RUN apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             bc bison ca-certificates coreutils curl flex gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
@@ -13,8 +13,8 @@ prep:
 tf-a:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/ARM-software/arm-trusted-firmware/archive/d557aaec77be42bf16472cc143d38afe4f935ec5.tar.gz -o /tmp/archive.tar.gz && \
-        echo '24ca524440d7b9de632eb1acfb92be0f0aa63cba0c2d89677b0f9c18d2ec0840  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/ARM-software/arm-trusted-firmware/archive/2503c8f3204c60013de8caa2e165b2875ad735e5.tar.gz -o /tmp/archive.tar.gz && \
+        echo 'f19f5e6c6795823d37b2c3ca6d7e6854d32a43a4a3e772053067805f562a6f29  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
     RUN sed -i 's!^\(#define\s\+RK3399_BAUDRATE\b\).\+$!\1 1500000!' plat/rockchip/rk3399/rk3399_def.h
     RUN make CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=arm-linux-gnueabi- PLAT=rk3399 DEBUG=0 bl31 -j$(nproc)
@@ -23,8 +23,8 @@ tf-a:
 u-boot:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/2f4664f5c3edc55b18d8906f256a4c8e303243c0.tar.gz -o /tmp/archive.tar.gz && \
-        echo 'e07244f12b9d4c3d86628dd5177769c777706bdf872691cd71fdbfd6df3f87bc  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/05aa6516c6bb419d01d69fac457c0de563bfd694.tar.gz -o /tmp/archive.tar.gz && \
+        echo 'dabc514c90d98451a3e11db226eb2ec98a043d081e969a137944b4c7cc665036  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
     COPY +tf-a/bl31.elf .
     COPY nanopi-r4s-rk3399_my_defconfig configs/
