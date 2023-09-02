@@ -24,11 +24,11 @@ tf-a:
 u-boot:
     FROM +prep
     RUN --mount=type=tmpfs,target=/tmp \
-        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/0fe0395922d859730eb7ddfcff6ed8d3ac4b2937.tar.gz -o /tmp/archive.tar.gz && \
-        echo 'c0e80c660fc4a3e2f1e25a0f577326476e49231184845d77b345c65c4730c021  /tmp/archive.tar.gz' | sha256sum -c && \
+        curl --no-progress-meter --location https://github.com/u-boot/u-boot/archive/8999257f219d1e371c2fd66f255b8782897944d9.tar.gz -o /tmp/archive.tar.gz && \
+        echo 'dec76e1780d1f9513d4d7f44896aa400a54986fcf2aa273c81dfa2f35703dacc  /tmp/archive.tar.gz' | sha256sum -c && \
         tar xf /tmp/archive.tar.gz --strip-components=1
-    COPY 0000-revert-regulator-implement-basic-reference-counter.patch .
-    RUN patch -Np1 < 0000-revert-regulator-implement-basic-reference-counter.patch
+    COPY 0000-Keep-fixed-gpio-regulator-enable-count-in-balance.patch .
+    RUN for p in ./*.patch; do patch -Np1 < "$p"; done
     COPY +tf-a/bl31.elf .
     COPY nanopi-r4s-rk3399_my_defconfig configs/
     RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_my_defconfig && \

@@ -1,0 +1,735 @@
+From patchwork Wed Jul 19 21:20:55 2023
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Jonas Karlman <jonas@kwiboo.se>
+X-Patchwork-Id: 1810050
+X-Patchwork-Delegate: trini@ti.com
+Return-Path: <u-boot-bounces@lists.denx.de>
+X-Original-To: incoming@patchwork.ozlabs.org
+Delivered-To: patchwork-incoming@legolas.ozlabs.org
+Authentication-Results: legolas.ozlabs.org;
+ spf=pass (sender SPF authorized) smtp.mailfrom=lists.denx.de
+ (client-ip=85.214.62.61; helo=phobos.denx.de;
+ envelope-from=u-boot-bounces@lists.denx.de; receiver=<UNKNOWN>)
+Authentication-Results: legolas.ozlabs.org;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.a=rsa-sha256
+ header.s=s1 header.b=DCoP86JV;
+	dkim-atps=neutral
+Received: from phobos.denx.de (phobos.denx.de [85.214.62.61])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature ECDSA (P-384) server-digest SHA384)
+	(No client certificate requested)
+	by legolas.ozlabs.org (Postfix) with ESMTPS id 4R5pf32NhDz1yYm
+	for <incoming@patchwork.ozlabs.org>; Thu, 20 Jul 2023 07:21:15 +1000 (AEST)
+Received: from h2850616.stratoserver.net (localhost [IPv6:::1])
+	by phobos.denx.de (Postfix) with ESMTP id 35A2286774;
+	Wed, 19 Jul 2023 23:21:05 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de;
+ spf=pass smtp.mailfrom=u-boot-bounces@lists.denx.de
+Authentication-Results: phobos.denx.de;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.b="DCoP86JV";
+	dkim-atps=neutral
+Received: by phobos.denx.de (Postfix, from userid 109)
+ id E7CD886792; Wed, 19 Jul 2023 23:20:59 +0200 (CEST)
+X-Spam-Checker-Version: SpamAssassin 3.4.2 (2018-09-13) on phobos.denx.de
+X-Spam-Level: 
+X-Spam-Status: No, score=-0.8 required=5.0 tests=BAYES_00,DKIM_SIGNED,
+ DKIM_VALID,DKIM_VALID_AU,DKIM_VALID_EF,RCVD_IN_BL_SPAMCOP_NET,
+ RCVD_IN_MSPIKE_H3,RCVD_IN_MSPIKE_WL,SPF_HELO_NONE,SPF_PASS,
+ T_SCC_BODY_TEXT_LINE,UNPARSEABLE_RELAY autolearn=no autolearn_force=no
+ version=3.4.2
+Received: from s.wrqvtbkv.outbound-mail.sendgrid.net
+ (s.wrqvtbkv.outbound-mail.sendgrid.net [149.72.123.24])
+ (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
+ (No client certificate requested)
+ by phobos.denx.de (Postfix) with ESMTPS id 728AB86774
+ for <u-boot@lists.denx.de>; Wed, 19 Jul 2023 23:20:57 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de; spf=pass
+ smtp.mailfrom=bounces+31435339-7456-u-boot=lists.denx.de@em2124.kwiboo.se
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kwiboo.se;
+ h=from:subject:in-reply-to:references:mime-version:to:cc:
+ content-transfer-encoding:content-type:cc:content-type:from:subject:to;
+ s=s1; bh=5DcwPofrp6DhamzWk848OHWT1aKI0DDWWv8CbwhqpeM=;
+ b=DCoP86JVsNz3V+JhptxzCwJFgVPjybwIznK+EO1voLSpxdbuoRyyav/84Q62IMn7mHvZ
+ UicyC2/bOb5Vpzhrrst2uj4h3YNRRb8zWHdbrrfllpDu05zNxHdwt/XSrCkNO37TGgl7GD
+ djAjn0mckEP0GdPnpAf1nlzG5Wf0V0nHWsgKjLhA/fryRR2Qj5cQgCsiFG+Zvwloo8kVDg
+ OF/2L7CPyquA3zp+AbXCF8L6y+ZjtwOiMd1cxlieNYvghEmxWAaUs7t17sjhUax6Fxn8w4
+ j1W9r5Q1nXKjNdZQlMNqdOPbouyConqHgeh6ljD3iDtfwouFaVIQnB/HCVWRsNIQ==
+Received: by filterdrecv-8684c58db7-5vsrj with SMTP id
+ filterdrecv-8684c58db7-5vsrj-1-64B853B6-1B
+ 2023-07-19 21:20:55.176550357 +0000 UTC m=+6039761.995477296
+Received: from bionic.localdomain (unknown) by geopod-ismtpd-1 (SG) with ESMTP
+ id ol2UrpvPRjKSXxo9JGb_8g Wed, 19 Jul 2023 21:20:54.733 +0000 (UTC)
+From: Jonas Karlman <jonas@kwiboo.se>
+Subject: [PATCH 1/5] adc: Use regulator_set_enable_if_allowed
+Date: Wed, 19 Jul 2023 21:20:55 +0000 (UTC)
+Message-ID: <20230719212049.709358-2-jonas@kwiboo.se>
+X-Mailer: git-send-email 2.41.0
+In-Reply-To: <20230719212049.709358-1-jonas@kwiboo.se>
+References: <20230719212049.709358-1-jonas@kwiboo.se>
+MIME-Version: 1.0
+X-SG-EID: 
+ TdbjyGynYnRZWhH+7lKUQJL+ZxmxpowvO2O9SQF5CwCVrYgcwUXgU5DKUU3QxAfZekEeQsTe+RrMu3cja6a0h+chQYgtLsks3uxrx06+A0ex2BFu+mOnONdYCTwZXDUVt9xWoQbcHZPc4tAY7rrtn/TlqNfn8rc9LG+GszyRZuBhWixZaM6ngbbRXap/0cM6tkkHu0UPVbNptF3za8BFdPsVsGc8yfeJ4G/GZ4qQgWyhMkvIg/VJrZ9odUzZ7TNs
+To: Simon Glass <sjg@chromium.org>, Marek Vasut <marex@denx.de>, Peng Fan
+ <peng.fan@nxp.com>, Jaehoon Chung <jh80.chung@samsung.com>, Patrice Chotard
+ <patrice.chotard@foss.st.com>
+Cc: Eugen Hristev <eugen.hristev@collabora.com>, Svyatoslav Ryhel
+ <clamor95@gmail.com>, u-boot@lists.denx.de, Jonas Karlman <jonas@kwiboo.se>
+X-Entity-ID: P7KYpSJvGCELWjBME/J5tg==
+X-BeenThere: u-boot@lists.denx.de
+X-Mailman-Version: 2.1.39
+Precedence: list
+List-Id: U-Boot discussion <u-boot.lists.denx.de>
+List-Unsubscribe: <https://lists.denx.de/options/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=unsubscribe>
+List-Archive: <https://lists.denx.de/pipermail/u-boot/>
+List-Post: <mailto:u-boot@lists.denx.de>
+List-Help: <mailto:u-boot-request@lists.denx.de?subject=help>
+List-Subscribe: <https://lists.denx.de/listinfo/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=subscribe>
+Errors-To: u-boot-bounces@lists.denx.de
+Sender: "U-Boot" <u-boot-bounces@lists.denx.de>
+X-Virus-Scanned: clamav-milter 0.103.8 at phobos.denx.de
+X-Virus-Status: Clean
+
+With the commit 4fcba5d556b4 ("regulator: implement basic reference
+counter") the return value of regulator_set_enable may be EALREADY or
+EBUSY for fixed/gpio regulators.
+
+Change to use the more relaxed regulator_set_enable_if_allowed to
+continue if regulator already was enabled or disabled.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+Reviewed-by: Simon Glass <sjg@chromium.org>
+Tested-by: Simon Glass <sjg@chromium.org>  # rockpro64-rk3399
+---
+ drivers/adc/adc-uclass.c | 22 ++++++++++------------
+ 1 file changed, 10 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/adc/adc-uclass.c b/drivers/adc/adc-uclass.c
+index 9646e4d70627..6074eccbf097 100644
+--- a/drivers/adc/adc-uclass.c
++++ b/drivers/adc/adc-uclass.c
+@@ -51,23 +51,21 @@ static int check_channel(struct udevice *dev, int value, bool number_or_mask,
+ static int adc_supply_enable(struct udevice *dev)
+ {
+ 	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+-	const char *supply_type;
+-	int ret = 0;
++	int ret;
+ 
+-	if (uc_pdata->vdd_supply) {
+-		supply_type = "vdd";
+-		ret = regulator_set_enable(uc_pdata->vdd_supply, true);
++	ret = regulator_set_enable_if_allowed(uc_pdata->vdd_supply, true);
++	if (ret && ret != -ENOSYS) {
++		pr_err("%s: can't enable vdd-supply!", dev->name);
++		return ret;
+ 	}
+ 
+-	if (!ret && uc_pdata->vss_supply) {
+-		supply_type = "vss";
+-		ret = regulator_set_enable(uc_pdata->vss_supply, true);
++	ret = regulator_set_enable_if_allowed(uc_pdata->vss_supply, true);
++	if (ret && ret != -ENOSYS) {
++		pr_err("%s: can't enable vss-supply!", dev->name);
++		return ret;
+ 	}
+ 
+-	if (ret)
+-		pr_err("%s: can't enable %s-supply!", dev->name, supply_type);
+-
+-	return ret;
++	return 0;
+ }
+ 
+ int adc_data_mask(struct udevice *dev, unsigned int *data_mask)
+
+From patchwork Wed Jul 19 21:20:56 2023
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Jonas Karlman <jonas@kwiboo.se>
+X-Patchwork-Id: 1810052
+X-Patchwork-Delegate: trini@ti.com
+Return-Path: <u-boot-bounces@lists.denx.de>
+X-Original-To: incoming@patchwork.ozlabs.org
+Delivered-To: patchwork-incoming@legolas.ozlabs.org
+Authentication-Results: legolas.ozlabs.org;
+ spf=pass (sender SPF authorized) smtp.mailfrom=lists.denx.de
+ (client-ip=85.214.62.61; helo=phobos.denx.de;
+ envelope-from=u-boot-bounces@lists.denx.de; receiver=<UNKNOWN>)
+Authentication-Results: legolas.ozlabs.org;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.a=rsa-sha256
+ header.s=s1 header.b=CdU8JfSL;
+	dkim-atps=neutral
+Received: from phobos.denx.de (phobos.denx.de [85.214.62.61])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature ECDSA (P-384))
+	(No client certificate requested)
+	by legolas.ozlabs.org (Postfix) with ESMTPS id 4R5pfR0M7yz1yYm
+	for <incoming@patchwork.ozlabs.org>; Thu, 20 Jul 2023 07:21:35 +1000 (AEST)
+Received: from h2850616.stratoserver.net (localhost [IPv6:::1])
+	by phobos.denx.de (Postfix) with ESMTP id 219A4867A0;
+	Wed, 19 Jul 2023 23:21:08 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de;
+ spf=pass smtp.mailfrom=u-boot-bounces@lists.denx.de
+Authentication-Results: phobos.denx.de;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.b="CdU8JfSL";
+	dkim-atps=neutral
+Received: by phobos.denx.de (Postfix, from userid 109)
+ id 281FA86797; Wed, 19 Jul 2023 23:21:02 +0200 (CEST)
+X-Spam-Checker-Version: SpamAssassin 3.4.2 (2018-09-13) on phobos.denx.de
+X-Spam-Level: 
+X-Spam-Status: No, score=-0.8 required=5.0 tests=BAYES_00,DKIM_SIGNED,
+ DKIM_VALID,DKIM_VALID_AU,DKIM_VALID_EF,RCVD_IN_BL_SPAMCOP_NET,
+ RCVD_IN_MSPIKE_H3,RCVD_IN_MSPIKE_WL,SPF_HELO_NONE,SPF_PASS,
+ T_SCC_BODY_TEXT_LINE,UNPARSEABLE_RELAY autolearn=no autolearn_force=no
+ version=3.4.2
+Received: from s.wrqvtzvf.outbound-mail.sendgrid.net
+ (s.wrqvtzvf.outbound-mail.sendgrid.net [149.72.126.143])
+ (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
+ (No client certificate requested)
+ by phobos.denx.de (Postfix) with ESMTPS id 7509384773
+ for <u-boot@lists.denx.de>; Wed, 19 Jul 2023 23:20:58 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de; spf=pass
+ smtp.mailfrom=bounces+31435339-7456-u-boot=lists.denx.de@em2124.kwiboo.se
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kwiboo.se;
+ h=from:subject:in-reply-to:references:mime-version:to:cc:
+ content-transfer-encoding:content-type:cc:content-type:from:subject:to;
+ s=s1; bh=T0i06skGkmRjFIcyN4FsdBWZpKfQXFbQOhlTedQLnjU=;
+ b=CdU8JfSLICUKyIcU+zY3EwOoRuGT73xMpio7Nfieq16Fq60VTP4Wpa9C5WdqlLyCKMx+
+ u9aYzBSq31t9sZS6uVP9ccsQQJ6H6RAsnKAyP8/SMeRH0m/9attqpL00TxOcTTdqDuRdZW
+ D5lNQwFILNfoofhVncKTcGVc+rWV2yzaoUuLDRsWb+yVuqeZyVLff64uObUQLnr9riIdt5
+ u7d7unEceWwwBq+RX6CRQChn5wzEfPPdQ5pXE3ppa1vbt74ug3Ya04psS59Uce51vSqeui
+ vlXQM5vC2UprWJ8ii/WLA22f6+P5lxkRnJA7cH1McyWWQQqNqXva6Callg/sWWVg==
+Received: by filterdrecv-84b96456cb-5hl7m with SMTP id
+ filterdrecv-84b96456cb-5hl7m-1-64B853B8-C
+ 2023-07-19 21:20:56.347787129 +0000 UTC m=+6039760.316534627
+Received: from bionic.localdomain (unknown) by geopod-ismtpd-1 (SG) with ESMTP
+ id 7i22uA-yQ0mdZ5R_bovfSw Wed, 19 Jul 2023 21:20:56.034 +0000 (UTC)
+From: Jonas Karlman <jonas@kwiboo.se>
+Subject: [PATCH 2/5] usb: dwc2: Use regulator_set_enable_if_allowed
+Date: Wed, 19 Jul 2023 21:20:56 +0000 (UTC)
+Message-ID: <20230719212049.709358-3-jonas@kwiboo.se>
+X-Mailer: git-send-email 2.41.0
+In-Reply-To: <20230719212049.709358-1-jonas@kwiboo.se>
+References: <20230719212049.709358-1-jonas@kwiboo.se>
+MIME-Version: 1.0
+X-SG-EID: 
+ TdbjyGynYnRZWhH+7lKUQJL+ZxmxpowvO2O9SQF5CwCVrYgcwUXgU5DKUU3QxAfZekEeQsTe+RrMu3cja6a0h44vZDBmqyGxFY+XDxGVc3NM5Tyq11ItPoAkUzPqgZFqCgMryiZ1GaP7LiDPYagls+3L1Nfniv9IN5emky9qO3WvI50SHYWAhi+5YXiObSPPA/ORk+omC5LxEdlVCwqzcsk6eJyva1jU5L7oYkcf2EJdUa53Cq6offwU++pRjHD7
+To: Simon Glass <sjg@chromium.org>, Marek Vasut <marex@denx.de>, Peng Fan
+ <peng.fan@nxp.com>, Jaehoon Chung <jh80.chung@samsung.com>, Patrice Chotard
+ <patrice.chotard@foss.st.com>
+Cc: Eugen Hristev <eugen.hristev@collabora.com>, Svyatoslav Ryhel
+ <clamor95@gmail.com>, u-boot@lists.denx.de, Jonas Karlman <jonas@kwiboo.se>
+X-Entity-ID: P7KYpSJvGCELWjBME/J5tg==
+X-BeenThere: u-boot@lists.denx.de
+X-Mailman-Version: 2.1.39
+Precedence: list
+List-Id: U-Boot discussion <u-boot.lists.denx.de>
+List-Unsubscribe: <https://lists.denx.de/options/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=unsubscribe>
+List-Archive: <https://lists.denx.de/pipermail/u-boot/>
+List-Post: <mailto:u-boot@lists.denx.de>
+List-Help: <mailto:u-boot-request@lists.denx.de?subject=help>
+List-Subscribe: <https://lists.denx.de/listinfo/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=subscribe>
+Errors-To: u-boot-bounces@lists.denx.de
+Sender: "U-Boot" <u-boot-bounces@lists.denx.de>
+X-Virus-Scanned: clamav-milter 0.103.8 at phobos.denx.de
+X-Virus-Status: Clean
+
+With the commit 4fcba5d556b4 ("regulator: implement basic reference
+counter") the return value of regulator_set_enable may be EALREADY or
+EBUSY for fixed/gpio regulators.
+
+Change to use the more relaxed regulator_set_enable_if_allowed to
+continue if regulator already was enabled or disabled.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+Reviewed-by: Simon Glass <sjg@chromium.org>
+Tested-by: Simon Glass <sjg@chromium.org>  # rockpro64-rk3399
+Reviewed-by: Marek Vasut <marex@denx.de>
+---
+ drivers/usb/host/dwc2.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/usb/host/dwc2.c b/drivers/usb/host/dwc2.c
+index 9818f9be94e0..637eb2dd06f5 100644
+--- a/drivers/usb/host/dwc2.c
++++ b/drivers/usb/host/dwc2.c
+@@ -194,8 +194,8 @@ static int dwc_vbus_supply_init(struct udevice *dev)
+ 		return 0;
+ 	}
+ 
+-	ret = regulator_set_enable(priv->vbus_supply, true);
+-	if (ret) {
++	ret = regulator_set_enable_if_allowed(priv->vbus_supply, true);
++	if (ret && ret != -ENOSYS) {
+ 		dev_err(dev, "Error enabling vbus supply\n");
+ 		return ret;
+ 	}
+@@ -208,12 +208,10 @@ static int dwc_vbus_supply_exit(struct udevice *dev)
+ 	struct dwc2_priv *priv = dev_get_priv(dev);
+ 	int ret;
+ 
+-	if (priv->vbus_supply) {
+-		ret = regulator_set_enable(priv->vbus_supply, false);
+-		if (ret) {
+-			dev_err(dev, "Error disabling vbus supply\n");
+-			return ret;
+-		}
++	ret = regulator_set_enable_if_allowed(priv->vbus_supply, false);
++	if (ret && ret != -ENOSYS) {
++		dev_err(dev, "Error disabling vbus supply\n");
++		return ret;
+ 	}
+ 
+ 	return 0;
+
+From patchwork Wed Jul 19 21:20:57 2023
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Jonas Karlman <jonas@kwiboo.se>
+X-Patchwork-Id: 1810051
+X-Patchwork-Delegate: trini@ti.com
+Return-Path: <u-boot-bounces@lists.denx.de>
+X-Original-To: incoming@patchwork.ozlabs.org
+Delivered-To: patchwork-incoming@legolas.ozlabs.org
+Authentication-Results: legolas.ozlabs.org;
+ spf=pass (sender SPF authorized) smtp.mailfrom=lists.denx.de
+ (client-ip=2a01:238:438b:c500:173d:9f52:ddab:ee01; helo=phobos.denx.de;
+ envelope-from=u-boot-bounces@lists.denx.de; receiver=<UNKNOWN>)
+Authentication-Results: legolas.ozlabs.org;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.a=rsa-sha256
+ header.s=s1 header.b=TnKHmcxv;
+	dkim-atps=neutral
+Received: from phobos.denx.de (phobos.denx.de
+ [IPv6:2a01:238:438b:c500:173d:9f52:ddab:ee01])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature ECDSA (P-384))
+	(No client certificate requested)
+	by legolas.ozlabs.org (Postfix) with ESMTPS id 4R5pfD6NQqz1yYm
+	for <incoming@patchwork.ozlabs.org>; Thu, 20 Jul 2023 07:21:24 +1000 (AEST)
+Received: from h2850616.stratoserver.net (localhost [IPv6:::1])
+	by phobos.denx.de (Postfix) with ESMTP id 056EA8679B;
+	Wed, 19 Jul 2023 23:21:07 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de;
+ spf=pass smtp.mailfrom=u-boot-bounces@lists.denx.de
+Authentication-Results: phobos.denx.de;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.b="TnKHmcxv";
+	dkim-atps=neutral
+Received: by phobos.denx.de (Postfix, from userid 109)
+ id 702A986786; Wed, 19 Jul 2023 23:21:02 +0200 (CEST)
+X-Spam-Checker-Version: SpamAssassin 3.4.2 (2018-09-13) on phobos.denx.de
+X-Spam-Level: 
+X-Spam-Status: No, score=-0.8 required=5.0 tests=BAYES_00,DKIM_SIGNED,
+ DKIM_VALID,DKIM_VALID_AU,DKIM_VALID_EF,RCVD_IN_BL_SPAMCOP_NET,
+ RCVD_IN_MSPIKE_H3,RCVD_IN_MSPIKE_WL,SPF_HELO_NONE,SPF_PASS,
+ T_SCC_BODY_TEXT_LINE,UNPARSEABLE_RELAY autolearn=no autolearn_force=no
+ version=3.4.2
+Received: from s.wrqvtzvf.outbound-mail.sendgrid.net
+ (s.wrqvtzvf.outbound-mail.sendgrid.net [149.72.126.143])
+ (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
+ (No client certificate requested)
+ by phobos.denx.de (Postfix) with ESMTPS id 4DF7286789
+ for <u-boot@lists.denx.de>; Wed, 19 Jul 2023 23:20:59 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de; spf=pass
+ smtp.mailfrom=bounces+31435339-7456-u-boot=lists.denx.de@em2124.kwiboo.se
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kwiboo.se;
+ h=from:subject:in-reply-to:references:mime-version:to:cc:
+ content-transfer-encoding:content-type:cc:content-type:from:subject:to;
+ s=s1; bh=AI/VRRwmcMHHfDeVzAQhg4NhZ1odriM/5huM9mMvqhU=;
+ b=TnKHmcxvKbeTmD8HSqbsExG01symW901jTDFIu6Yjr8PuxVA2hhUQST7DfoWLz7XljS1
+ K4zsBqgyOyNU8sL0kEV4vrs0m1cF5FXMNFjFBwLPaaVruGO22ipj7s9eRiqxNyWrkSMwOE
+ 2Zfn1A/HUuYR1+hXeJlvx5nwZjkxDFmh7lt/pKo1DEahWTU0lDr0mvDi0P2bxXS0N2ofik
+ p1iN0+AusimOnwyuOz8RB/jZUgbiAeOVObYzcay2M8F5x/yRPvwbjiywoJ8h0EOEXCcSxP
+ Vc2fAflHMfh5VChOezVkP4zueO4yp//Z1HEgZb/zwxT1NE3p+itXdAI1mcRO1TqQ==
+Received: by filterdrecv-65f68489c8-lsfh9 with SMTP id
+ filterdrecv-65f68489c8-lsfh9-1-64B853B9-1B
+ 2023-07-19 21:20:57.680418019 +0000 UTC m=+6039898.512519593
+Received: from bionic.localdomain (unknown) by geopod-ismtpd-1 (SG) with ESMTP
+ id KBfyghcrTvmknYTMnFmF8Q Wed, 19 Jul 2023 21:20:57.466 +0000 (UTC)
+From: Jonas Karlman <jonas@kwiboo.se>
+Subject: [PATCH 3/5] usb: ehci-generic: Use regulator_set_enable_if_allowed
+Date: Wed, 19 Jul 2023 21:20:57 +0000 (UTC)
+Message-ID: <20230719212049.709358-4-jonas@kwiboo.se>
+X-Mailer: git-send-email 2.41.0
+In-Reply-To: <20230719212049.709358-1-jonas@kwiboo.se>
+References: <20230719212049.709358-1-jonas@kwiboo.se>
+MIME-Version: 1.0
+X-SG-EID: 
+ TdbjyGynYnRZWhH+7lKUQJL+ZxmxpowvO2O9SQF5CwCVrYgcwUXgU5DKUU3QxAfZekEeQsTe+RrMu3cja6a0h33sQ6Dq178umNFdimTI/cdRBX5QgvGq7lllG/Am9H50pTIOsY2FfDf7cWNhdEhHx51jqa+CGVxPy4nYzD7xJXTHZuowxaSt+RAaIuZZpAiKIBkyZi7FCFamG9OAHDBNsf1I4EYR/MdpwK5OMXNRGpXKXxPLjWlTfLA3AzH9oFkH
+To: Simon Glass <sjg@chromium.org>, Marek Vasut <marex@denx.de>, Peng Fan
+ <peng.fan@nxp.com>, Jaehoon Chung <jh80.chung@samsung.com>, Patrice Chotard
+ <patrice.chotard@foss.st.com>
+Cc: Eugen Hristev <eugen.hristev@collabora.com>, Svyatoslav Ryhel
+ <clamor95@gmail.com>, u-boot@lists.denx.de, Jonas Karlman <jonas@kwiboo.se>
+X-Entity-ID: P7KYpSJvGCELWjBME/J5tg==
+X-BeenThere: u-boot@lists.denx.de
+X-Mailman-Version: 2.1.39
+Precedence: list
+List-Id: U-Boot discussion <u-boot.lists.denx.de>
+List-Unsubscribe: <https://lists.denx.de/options/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=unsubscribe>
+List-Archive: <https://lists.denx.de/pipermail/u-boot/>
+List-Post: <mailto:u-boot@lists.denx.de>
+List-Help: <mailto:u-boot-request@lists.denx.de?subject=help>
+List-Subscribe: <https://lists.denx.de/listinfo/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=subscribe>
+Errors-To: u-boot-bounces@lists.denx.de
+Sender: "U-Boot" <u-boot-bounces@lists.denx.de>
+X-Virus-Scanned: clamav-milter 0.103.8 at phobos.denx.de
+X-Virus-Status: Clean
+
+With the commit 4fcba5d556b4 ("regulator: implement basic reference
+counter") the return value of regulator_set_enable may be EALREADY or
+EBUSY for fixed/gpio regulators.
+
+Change to use the more relaxed regulator_set_enable_if_allowed to
+continue if regulator already was enabled or disabled.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+Reviewed-by: Marek Vasut <marex@denx.de>
+---
+ drivers/usb/host/ehci-generic.c | 23 +++++++++++------------
+ 1 file changed, 11 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/usb/host/ehci-generic.c b/drivers/usb/host/ehci-generic.c
+index a765a307a323..936e30438d9f 100644
+--- a/drivers/usb/host/ehci-generic.c
++++ b/drivers/usb/host/ehci-generic.c
+@@ -39,14 +39,10 @@ static int ehci_enable_vbus_supply(struct udevice *dev)
+ 	if (ret && ret != -ENOENT)
+ 		return ret;
+ 
+-	if (priv->vbus_supply) {
+-		ret = regulator_set_enable(priv->vbus_supply, true);
+-		if (ret) {
+-			dev_err(dev, "Error enabling VBUS supply (ret=%d)\n", ret);
+-			return ret;
+-		}
+-	} else {
+-		dev_dbg(dev, "No vbus supply\n");
++	ret = regulator_set_enable_if_allowed(priv->vbus_supply, true);
++	if (ret && ret != -ENOSYS) {
++		dev_err(dev, "Error enabling VBUS supply (ret=%d)\n", ret);
++		return ret;
+ 	}
+ 
+ 	return 0;
+@@ -54,10 +50,13 @@ static int ehci_enable_vbus_supply(struct udevice *dev)
+ 
+ static int ehci_disable_vbus_supply(struct generic_ehci *priv)
+ {
+-	if (priv->vbus_supply)
+-		return regulator_set_enable(priv->vbus_supply, false);
+-	else
+-		return 0;
++	int ret;
++
++	ret = regulator_set_enable_if_allowed(priv->vbus_supply, false);
++	if (ret && ret != -ENOSYS)
++		return ret;
++
++	return 0;
+ }
+ 
+ static int ehci_usb_probe(struct udevice *dev)
+
+From patchwork Wed Jul 19 21:20:59 2023
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Jonas Karlman <jonas@kwiboo.se>
+X-Patchwork-Id: 1810053
+X-Patchwork-Delegate: trini@ti.com
+Return-Path: <u-boot-bounces@lists.denx.de>
+X-Original-To: incoming@patchwork.ozlabs.org
+Delivered-To: patchwork-incoming@legolas.ozlabs.org
+Authentication-Results: legolas.ozlabs.org;
+ spf=pass (sender SPF authorized) smtp.mailfrom=lists.denx.de
+ (client-ip=2a01:238:438b:c500:173d:9f52:ddab:ee01; helo=phobos.denx.de;
+ envelope-from=u-boot-bounces@lists.denx.de; receiver=<UNKNOWN>)
+Authentication-Results: legolas.ozlabs.org;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.a=rsa-sha256
+ header.s=s1 header.b=ONV6baZM;
+	dkim-atps=neutral
+Received: from phobos.denx.de (phobos.denx.de
+ [IPv6:2a01:238:438b:c500:173d:9f52:ddab:ee01])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature ECDSA (P-384) server-digest SHA384)
+	(No client certificate requested)
+	by legolas.ozlabs.org (Postfix) with ESMTPS id 4R5pfd2QR5z1yYm
+	for <incoming@patchwork.ozlabs.org>; Thu, 20 Jul 2023 07:21:45 +1000 (AEST)
+Received: from h2850616.stratoserver.net (localhost [IPv6:::1])
+	by phobos.denx.de (Postfix) with ESMTP id EF11286793;
+	Wed, 19 Jul 2023 23:21:09 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de;
+ spf=pass smtp.mailfrom=u-boot-bounces@lists.denx.de
+Authentication-Results: phobos.denx.de;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.b="ONV6baZM";
+	dkim-atps=neutral
+Received: by phobos.denx.de (Postfix, from userid 109)
+ id 2ABF784701; Wed, 19 Jul 2023 23:21:04 +0200 (CEST)
+X-Spam-Checker-Version: SpamAssassin 3.4.2 (2018-09-13) on phobos.denx.de
+X-Spam-Level: 
+X-Spam-Status: No, score=-0.8 required=5.0 tests=BAYES_00,DKIM_SIGNED,
+ DKIM_VALID,DKIM_VALID_AU,DKIM_VALID_EF,RCVD_IN_BL_SPAMCOP_NET,
+ RCVD_IN_MSPIKE_H3,RCVD_IN_MSPIKE_WL,SPF_HELO_NONE,SPF_PASS,
+ T_SCC_BODY_TEXT_LINE,UNPARSEABLE_RELAY autolearn=no autolearn_force=no
+ version=3.4.2
+Received: from s.wrqvwxzv.outbound-mail.sendgrid.net
+ (s.wrqvwxzv.outbound-mail.sendgrid.net [149.72.154.232])
+ (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
+ (No client certificate requested)
+ by phobos.denx.de (Postfix) with ESMTPS id 2CA8A86783
+ for <u-boot@lists.denx.de>; Wed, 19 Jul 2023 23:21:00 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de; spf=pass
+ smtp.mailfrom=bounces+31435339-7456-u-boot=lists.denx.de@em2124.kwiboo.se
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kwiboo.se;
+ h=from:subject:in-reply-to:references:mime-version:to:cc:
+ content-transfer-encoding:content-type:cc:content-type:from:subject:to;
+ s=s1; bh=9iQLlF4jD6EVWLX9nMnwgz+VCqIgl7vBzDZZFAbFoSA=;
+ b=ONV6baZMaIkVig1NXn5sg7Rzqk+IqvRC5thQSvkKgm3/aN9sQcjXJnMfepVQu4MzjOsi
+ +OL5RBlgTttnaLNGu84KlkaV+bhl/j4zO7g5wmJZbSArCc2h2nRcVELGyueiqI1uuMQpEV
+ LoKsVvFXwFrCMhUuYRwxaSE6TdsbT/kqdAOIg36m/w4fB0vuaqghdiRjbW3uzlKRqnKUun
+ B4YrH0MzItRooiubliRcUcYorkaOCdtWAeSJMUOzGtSUguPOxlHyGSM21vnwyJU6z1IOM1
+ R6LRmS1iYf0RAZG7ltlnnknSTs0pQfxJY+JkxZgvWORt/walLEqnI9pz1KvHBk9A==
+Received: by filterdrecv-8684c58db7-5vsrj with SMTP id
+ filterdrecv-8684c58db7-5vsrj-1-64B853BA-2A
+ 2023-07-19 21:20:59.128138835 +0000 UTC m=+6039765.947065672
+Received: from bionic.localdomain (unknown) by geopod-ismtpd-1 (SG) with ESMTP
+ id 0kLL1soMTgejBj7cjRuc2g Wed, 19 Jul 2023 21:20:58.824 +0000 (UTC)
+From: Jonas Karlman <jonas@kwiboo.se>
+Subject: [PATCH 4/5] mmc: Use regulator_set_enable_if_allowed
+Date: Wed, 19 Jul 2023 21:20:59 +0000 (UTC)
+Message-ID: <20230719212049.709358-5-jonas@kwiboo.se>
+X-Mailer: git-send-email 2.41.0
+In-Reply-To: <20230719212049.709358-1-jonas@kwiboo.se>
+References: <20230719212049.709358-1-jonas@kwiboo.se>
+MIME-Version: 1.0
+X-SG-EID: 
+ TdbjyGynYnRZWhH+7lKUQJL+ZxmxpowvO2O9SQF5CwCVrYgcwUXgU5DKUU3QxAfZekEeQsTe+RrMu3cja6a0hxvNZZjedCzlytmauVL9qKLfReF+h4qWrdx+ZqbC0PJis/zxpxHABmG6Iz+5zPeeBKDIsYadyX0r/vh7omO2+gCfmh9GDm5l2zQ6qo/aeVf49FDf4Lmgda6oujUmIeZcgUA7B9EUQuBe0hO8na/SNu/ZEp7sGAg3Hu0B88u9KP1o
+To: Simon Glass <sjg@chromium.org>, Marek Vasut <marex@denx.de>, Peng Fan
+ <peng.fan@nxp.com>, Jaehoon Chung <jh80.chung@samsung.com>, Patrice Chotard
+ <patrice.chotard@foss.st.com>
+Cc: Eugen Hristev <eugen.hristev@collabora.com>, Svyatoslav Ryhel
+ <clamor95@gmail.com>, u-boot@lists.denx.de, Jonas Karlman <jonas@kwiboo.se>
+X-Entity-ID: P7KYpSJvGCELWjBME/J5tg==
+X-BeenThere: u-boot@lists.denx.de
+X-Mailman-Version: 2.1.39
+Precedence: list
+List-Id: U-Boot discussion <u-boot.lists.denx.de>
+List-Unsubscribe: <https://lists.denx.de/options/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=unsubscribe>
+List-Archive: <https://lists.denx.de/pipermail/u-boot/>
+List-Post: <mailto:u-boot@lists.denx.de>
+List-Help: <mailto:u-boot-request@lists.denx.de?subject=help>
+List-Subscribe: <https://lists.denx.de/listinfo/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=subscribe>
+Errors-To: u-boot-bounces@lists.denx.de
+Sender: "U-Boot" <u-boot-bounces@lists.denx.de>
+X-Virus-Scanned: clamav-milter 0.103.8 at phobos.denx.de
+X-Virus-Status: Clean
+
+With the commit 4fcba5d556b4 ("regulator: implement basic reference
+counter") the return value of regulator_set_enable may be EALREADY or
+EBUSY for fixed/gpio regulators.
+
+Change to use the more relaxed regulator_set_enable_if_allowed to
+continue if regulator already was enabled or disabled.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+Reviewed-by: Simon Glass <sjg@chromium.org>
+Tested-by: Simon Glass <sjg@chromium.org>  # rockpro64-rk3399
+Tested-by: Svyatoslav Ryhel <clamor95@gmail.com> # P895 Tegra 3;
+---
+ drivers/mmc/mmc.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/mmc/mmc.c b/drivers/mmc/mmc.c
+index 31cfda288587..089a0442568c 100644
+--- a/drivers/mmc/mmc.c
++++ b/drivers/mmc/mmc.c
+@@ -2775,9 +2775,10 @@ static int mmc_power_on(struct mmc *mmc)
+ {
+ #if CONFIG_IS_ENABLED(DM_MMC) && CONFIG_IS_ENABLED(DM_REGULATOR)
+ 	if (mmc->vmmc_supply) {
+-		int ret = regulator_set_enable(mmc->vmmc_supply, true);
++		int ret = regulator_set_enable_if_allowed(mmc->vmmc_supply,
++							  true);
+ 
+-		if (ret && ret != -EACCES) {
++		if (ret && ret != -ENOSYS) {
+ 			printf("Error enabling VMMC supply : %d\n", ret);
+ 			return ret;
+ 		}
+@@ -2791,9 +2792,10 @@ static int mmc_power_off(struct mmc *mmc)
+ 	mmc_set_clock(mmc, 0, MMC_CLK_DISABLE);
+ #if CONFIG_IS_ENABLED(DM_MMC) && CONFIG_IS_ENABLED(DM_REGULATOR)
+ 	if (mmc->vmmc_supply) {
+-		int ret = regulator_set_enable(mmc->vmmc_supply, false);
++		int ret = regulator_set_enable_if_allowed(mmc->vmmc_supply,
++							  false);
+ 
+-		if (ret && ret != -EACCES) {
++		if (ret && ret != -ENOSYS) {
+ 			pr_debug("Error disabling VMMC supply : %d\n", ret);
+ 			return ret;
+ 		}
+
+From patchwork Wed Jul 19 21:21:00 2023
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Jonas Karlman <jonas@kwiboo.se>
+X-Patchwork-Id: 1810054
+X-Patchwork-Delegate: trini@ti.com
+Return-Path: <u-boot-bounces@lists.denx.de>
+X-Original-To: incoming@patchwork.ozlabs.org
+Delivered-To: patchwork-incoming@legolas.ozlabs.org
+Authentication-Results: legolas.ozlabs.org;
+ spf=pass (sender SPF authorized) smtp.mailfrom=lists.denx.de
+ (client-ip=85.214.62.61; helo=phobos.denx.de;
+ envelope-from=u-boot-bounces@lists.denx.de; receiver=<UNKNOWN>)
+Authentication-Results: legolas.ozlabs.org;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.a=rsa-sha256
+ header.s=s1 header.b=hJDGzSuX;
+	dkim-atps=neutral
+Received: from phobos.denx.de (phobos.denx.de [85.214.62.61])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature ECDSA (P-384))
+	(No client certificate requested)
+	by legolas.ozlabs.org (Postfix) with ESMTPS id 4R5pfr2fdvz1yYm
+	for <incoming@patchwork.ozlabs.org>; Thu, 20 Jul 2023 07:21:56 +1000 (AEST)
+Received: from h2850616.stratoserver.net (localhost [IPv6:::1])
+	by phobos.denx.de (Postfix) with ESMTP id 6E6B986792;
+	Wed, 19 Jul 2023 23:21:11 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de;
+ spf=pass smtp.mailfrom=u-boot-bounces@lists.denx.de
+Authentication-Results: phobos.denx.de;
+	dkim=pass (2048-bit key;
+ unprotected) header.d=kwiboo.se header.i=@kwiboo.se header.b="hJDGzSuX";
+	dkim-atps=neutral
+Received: by phobos.denx.de (Postfix, from userid 109)
+ id 5CB1B86783; Wed, 19 Jul 2023 23:21:05 +0200 (CEST)
+X-Spam-Checker-Version: SpamAssassin 3.4.2 (2018-09-13) on phobos.denx.de
+X-Spam-Level: 
+X-Spam-Status: No, score=-0.8 required=5.0 tests=BAYES_00,DKIM_SIGNED,
+ DKIM_VALID,DKIM_VALID_AU,DKIM_VALID_EF,RCVD_IN_BL_SPAMCOP_NET,
+ RCVD_IN_MSPIKE_H3,RCVD_IN_MSPIKE_WL,SPF_HELO_NONE,SPF_PASS,
+ T_SCC_BODY_TEXT_LINE,UNPARSEABLE_RELAY autolearn=no autolearn_force=no
+ version=3.4.2
+Received: from s.wrqvtbkv.outbound-mail.sendgrid.net
+ (s.wrqvtbkv.outbound-mail.sendgrid.net [149.72.123.24])
+ (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
+ (No client certificate requested)
+ by phobos.denx.de (Postfix) with ESMTPS id 04AEF86795
+ for <u-boot@lists.denx.de>; Wed, 19 Jul 2023 23:21:01 +0200 (CEST)
+Authentication-Results: phobos.denx.de;
+ dmarc=pass (p=none dis=none) header.from=kwiboo.se
+Authentication-Results: phobos.denx.de; spf=pass
+ smtp.mailfrom=bounces+31435339-7456-u-boot=lists.denx.de@em2124.kwiboo.se
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kwiboo.se;
+ h=from:subject:in-reply-to:references:mime-version:to:cc:
+ content-transfer-encoding:content-type:cc:content-type:from:subject:to;
+ s=s1; bh=yUrw/TWLPabPc3QvjUpDYhSqVVOCRH8V76pJGzoeEVg=;
+ b=hJDGzSuXabDnmor0Q90na73GkTzDNMOShcHi+toAf8Sv1flnB6IKS1ks6oOLfPZzvp/V
+ tGPmGiz7rqLoHBQM0dPODrGSdkepP8tdmnUTKxSffZz/yoQQ/CzfO8WOBmvAyQu3C5f4r7
+ 1kw71HzbKY8Hin3LJdmsjn5bk9TdKXjybCeDu4JcWMeCwClJzlo9cwd4PzDDd8CENJFzA/
+ MJJegZ0efFK8wRwrQxgWgE84iQ8YGodq50CnQgf//3A49+QmUVftAnBn4hi1RiWcCFfRBc
+ FI0XWZxEyfYXbWSeo1LeEA51pZS0tYg7FapiazYJUudXsfueT+cmDOVENaQdy2dw==
+Received: by filterdrecv-77869f68cc-5zdvl with SMTP id
+ filterdrecv-77869f68cc-5zdvl-1-64B853BC-13
+ 2023-07-19 21:21:00.392929798 +0000 UTC m=+6039898.190785677
+Received: from bionic.localdomain (unknown) by geopod-ismtpd-1 (SG) with ESMTP
+ id Zo1vJ9Q2R6GO3j6PNGZ_FA Wed, 19 Jul 2023 21:21:00.182 +0000 (UTC)
+From: Jonas Karlman <jonas@kwiboo.se>
+Subject: [PATCH 5/5] mmc: dw_mmc: Keep vqmmc-supply enable count in balance
+Date: Wed, 19 Jul 2023 21:21:00 +0000 (UTC)
+Message-ID: <20230719212049.709358-6-jonas@kwiboo.se>
+X-Mailer: git-send-email 2.41.0
+In-Reply-To: <20230719212049.709358-1-jonas@kwiboo.se>
+References: <20230719212049.709358-1-jonas@kwiboo.se>
+MIME-Version: 1.0
+X-SG-EID: 
+ TdbjyGynYnRZWhH+7lKUQJL+ZxmxpowvO2O9SQF5CwCVrYgcwUXgU5DKUU3QxAfZekEeQsTe+RrMu3cja6a0h/g8UqMHLN3Bl3oxCrmEJVhih9k13OxDwtit7TfVkQeR5DbQUv1RwIzEiYySwDwi2CSyrCGOKnSaICGSv4zWh0iqLEIP5y6oAGJEd62OsrKYAPC5qy4XhsWe/UQtvn0o5DRJp5FJK07nxyNAuBq7o3pgTXF7KrMvCFXXPtNhOmx9
+To: Simon Glass <sjg@chromium.org>, Marek Vasut <marex@denx.de>, Peng Fan
+ <peng.fan@nxp.com>, Jaehoon Chung <jh80.chung@samsung.com>, Patrice Chotard
+ <patrice.chotard@foss.st.com>
+Cc: Eugen Hristev <eugen.hristev@collabora.com>, Svyatoslav Ryhel
+ <clamor95@gmail.com>, u-boot@lists.denx.de, Jonas Karlman <jonas@kwiboo.se>
+X-Entity-ID: P7KYpSJvGCELWjBME/J5tg==
+X-BeenThere: u-boot@lists.denx.de
+X-Mailman-Version: 2.1.39
+Precedence: list
+List-Id: U-Boot discussion <u-boot.lists.denx.de>
+List-Unsubscribe: <https://lists.denx.de/options/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=unsubscribe>
+List-Archive: <https://lists.denx.de/pipermail/u-boot/>
+List-Post: <mailto:u-boot@lists.denx.de>
+List-Help: <mailto:u-boot-request@lists.denx.de?subject=help>
+List-Subscribe: <https://lists.denx.de/listinfo/u-boot>,
+ <mailto:u-boot-request@lists.denx.de?subject=subscribe>
+Errors-To: u-boot-bounces@lists.denx.de
+Sender: "U-Boot" <u-boot-bounces@lists.denx.de>
+X-Virus-Scanned: clamav-milter 0.103.8 at phobos.denx.de
+X-Virus-Status: Clean
+
+With the commit 4fcba5d556b4 ("regulator: implement basic reference
+counter"), keeping regulator enablement in balance become more important.
+
+Disable vqmmc-supply before signal voltage is changed to keep regulator
+enable counter in balance.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+---
+ drivers/mmc/dw_mmc.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/mmc/dw_mmc.c b/drivers/mmc/dw_mmc.c
+index 5085a3b491da..400066fa99a2 100644
+--- a/drivers/mmc/dw_mmc.c
++++ b/drivers/mmc/dw_mmc.c
+@@ -509,6 +509,10 @@ static int dwmci_set_ios(struct mmc *mmc)
+ 	if (mmc->vqmmc_supply) {
+ 		int ret;
+ 
++		ret = regulator_set_enable_if_allowed(mmc->vqmmc_supply, false);
++		if (ret)
++			return ret;
++
+ 		if (mmc->signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+ 			regulator_set_value(mmc->vqmmc_supply, 1800000);
+ 		else
