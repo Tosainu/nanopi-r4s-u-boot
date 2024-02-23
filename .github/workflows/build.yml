@@ -23,17 +23,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3.0.0
-      - name: Build the base image
-        uses: docker/build-push-action@v5.1.0
-        with:
-          push: false
-          context: .
-          target: base
-          cache-from: |
-            ghcr.io/tosainu/nanopi-r4s-u-boot/base:latest
-          cache-to: |
-            ${{ (github.ref == 'refs/heads/main' && 'ghcr.io/tosainu/nanopi-r4s-u-boot/base:latest') || '' }}
-      - name: Build U-Boot
+      - name: Build
         uses: docker/build-push-action@v5.1.0
         with:
           push: false
@@ -41,6 +31,10 @@ jobs:
           target: u-boot
           outputs: |
             type=local,dest=./build/
+          cache-from: |
+            ghcr.io/tosainu/nanopi-r4s-u-boot/base:latest
+          cache-to: |
+            ${{ (github.ref == 'refs/heads/main' && 'ghcr.io/tosainu/nanopi-r4s-u-boot/base:latest') || '' }}
       - name: Upload the artifact
         uses: actions/upload-artifact@v4.3.1
         with:
