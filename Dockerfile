@@ -28,3 +28,12 @@ RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_my_defconfig && \
 
 FROM scratch as u-boot
 COPY --from=build-u-boot /work/u-boot-rockchip.bin /
+
+
+FROM build-u-boot as build-u-boot-defconfig
+RUN make CROSS_COMPILE=aarch64-linux-gnu- savedefconfig
+
+
+FROM scratch as u-boot-defconfig
+COPY --from=build-u-boot-defconfig /work/.config /config
+COPY --from=build-u-boot-defconfig /work/defconfig /
