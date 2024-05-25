@@ -3,21 +3,12 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: saturday
-      time: "09:00"
-      timezone: Asia/Tokyo
+      interval: monthly
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
-      day: saturday
-      time: "09:00"
-      timezone: Asia/Tokyo
+      interval: monthly
   - package-ecosystem: gitsubmodule
     directory: /
     schedule:
-      interval: weekly
-      day: saturday
-      time: "09:00"
-      timezone: Asia/Tokyo
+      interval: monthly
