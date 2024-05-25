@@ -18,19 +18,20 @@ FROM scratch as tf-a
 COPY --from=build-tf-a /work/build/rk3399/release/bl31/bl31.elf /
 
 
-FROM base as build-u-boot
+FROM base as configure-u-boot
 COPY u-boot .
-COPY --from=tf-a /bl31.elf .
 COPY nanopi-r4s-rk3399_my_defconfig configs/
-RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_my_defconfig && \
-    PATH="${PWD}/scripts/dtc:${PATH}" make BINMAN_DEBUG=1 BINMAN_VERBOSE=6 BL31=bl31.elf CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_my_defconfig
 
+FROM configure-u-boot as build-u-boot
+COPY --from=tf-a /bl31.elf .
+RUN PATH="${PWD}/scripts/dtc:${PATH}" make BINMAN_DEBUG=1 BINMAN_VERBOSE=6 BL31=bl31.elf CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
 
 FROM scratch as u-boot
 COPY --from=build-u-boot /work/u-boot-rockchip.bin /
 
 
-FROM build-u-boot as build-u-boot-defconfig
+FROM configure-u-boot as build-u-boot-defconfig
 RUN make CROSS_COMPILE=aarch64-linux-gnu- savedefconfig
 
 
