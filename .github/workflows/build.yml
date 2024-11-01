@@ -36,7 +36,7 @@ jobs:
           cache-to: |
             ${{ (github.ref == 'refs/heads/main' && 'ghcr.io/tosainu/nanopi-r4s-u-boot/base:latest') || '' }}
       - name: Upload the artifact
-        uses: actions/upload-artifact@v4.4.0
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: build
           path: ./build/u-boot-rockchip.bin
