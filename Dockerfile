@@ -1,4 +1,4 @@
-FROM ubuntu:mantic@sha256:fd7fe639db24c4e005643921beea92bc449aac4f4d40d60cd9ad9ab6456aec01 AS base
+FROM ubuntu:noble@sha256:72297848456d5d37d1262630108ab308d3e9ec7ed1c3286a32fe09856619a782 AS base
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bc bison ca-certificates coreutils curl flex gcc gcc-aarch64-linux-gnu \
