@@ -1,4 +1,4 @@
-FROM ubuntu:plucky@sha256:27771fb7b40a58237c98e8d3e6b9ecdd9289cec69a857fccfb85ff36294dac20 AS base
+FROM ubuntu:questing@sha256:5922638447b1e3ba114332c896a2c7288c876bb94adec923d70d58a17d2fec5e AS base
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bc bison ca-certificates coreutils curl flex gcc gcc-aarch64-linux-gnu \
