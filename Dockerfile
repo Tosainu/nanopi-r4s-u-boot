@@ -1,17 +1,14 @@
-FROM ubuntu:questing@sha256:5922638447b1e3ba114332c896a2c7288c876bb94adec923d70d58a17d2fec5e AS base
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        bc bison ca-certificates coreutils curl flex gcc gcc-aarch64-linux-gnu \
-        gcc-arm-linux-gnueabi gzip libssl-dev make patch python3-dev python3-pyelftools \
-        python3-setuptools swig tar && \
-    rm -rf /var/lib/apt/lists/*
+FROM alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375 AS base
+RUN apk add --no-cache \
+  bison flex gcc gcc-aarch64-none-elf gcc-arm-none-eabi make musl-dev openssl-dev \
+  py3-elftools py3-setuptools python3 python3-dev swig
 WORKDIR /work
 
 
 FROM base AS build-tf-a
 COPY arm-trusted-firmware .
 RUN sed -i 's!^\(#define\s\+RK3399_BAUDRATE\b\).\+$!\1 1500000!' plat/rockchip/rk3399/rk3399_def.h
-RUN make CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=arm-linux-gnueabi- PLAT=rk3399 DEBUG=0 bl31 -j$(nproc)
+RUN make CROSS_COMPILE=aarch64-none-elf- M0_CROSS_COMPILE=arm-none-eabi- PLAT=rk3399 DEBUG=0 bl31 -j$(nproc)
 
 
 FROM scratch AS tf-a
@@ -21,18 +18,18 @@ COPY --from=build-tf-a /work/build/rk3399/release/bl31/bl31.elf /
 FROM base AS configure-u-boot
 COPY u-boot .
 COPY nanopi-r4s-rk3399_my_defconfig configs/
-RUN make CROSS_COMPILE=aarch64-linux-gnu- nanopi-r4s-rk3399_my_defconfig
+RUN make CROSS_COMPILE=aarch64-none-elf- nanopi-r4s-rk3399_my_defconfig
 
 FROM configure-u-boot AS build-u-boot
 COPY --from=tf-a /bl31.elf .
-RUN PATH="${PWD}/scripts/dtc:${PATH}" make BINMAN_DEBUG=1 BINMAN_VERBOSE=6 BL31=bl31.elf CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+RUN PATH="${PWD}/scripts/dtc:${PATH}" make BINMAN_DEBUG=1 BINMAN_VERBOSE=6 BL31=bl31.elf CROSS_COMPILE=aarch64-none-elf- -j$(nproc)
 
 FROM scratch AS u-boot
 COPY --from=build-u-boot /work/u-boot-rockchip.bin /
 
 
 FROM configure-u-boot AS build-u-boot-defconfig
-RUN make CROSS_COMPILE=aarch64-linux-gnu- savedefconfig
+RUN make CROSS_COMPILE=aarch64-none-elf- savedefconfig
 
 
 FROM scratch AS u-boot-defconfig
