@@ -1,4 +1,4 @@
-FROM alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375 AS base
+FROM alpine:3.23.2@sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662dff6da4eb62 AS base
 RUN apk add --no-cache \
   bison flex gcc gcc-aarch64-none-elf gcc-arm-none-eabi make musl-dev openssl-dev \
   py3-elftools py3-setuptools python3 python3-dev swig
