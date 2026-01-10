@@ -1,7 +1,19 @@
 FROM alpine:3.23.2@sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662dff6da4eb62 AS base
 RUN apk add --no-cache \
-  bison flex gcc gcc-aarch64-none-elf gcc-arm-none-eabi make musl-dev openssl-dev \
-  py3-elftools py3-setuptools python3 python3-dev swig
+  bash \
+  bison \
+  flex \
+  gcc \
+  gcc-aarch64-none-elf \
+  gcc-arm-none-eabi \
+  make \
+  musl-dev \
+  openssl-dev \
+  py3-elftools \
+  py3-setuptools \
+  python3 \
+  python3-dev \
+  swig
 WORKDIR /work
 
 
